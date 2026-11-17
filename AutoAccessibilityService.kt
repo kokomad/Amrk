@@ -64,7 +64,7 @@ class AutoAccessibilityService : AccessibilityService() {
         }
         handler.postDelayed(tick, 2500)
     }
-    private val tick: Runnable = object : Runnable { : Runnable {
+        private val tick: Runnable = object : Runnable {
         override fun run() {
             val p = active ?: return
             if (p.busy) return
@@ -75,7 +75,7 @@ class AutoAccessibilityService : AccessibilityService() {
             val step = p.steps.first()
             val ok = try { doStep(step) } catch (e: Exception) { false }
             if (!ok) {
-             handler.postDelayed(this, 700)
+                handler.postDelayed(this, 700)
                 return
             }
             p.steps.removeFirst()
