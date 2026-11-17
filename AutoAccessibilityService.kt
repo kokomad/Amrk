@@ -75,7 +75,7 @@ class AutoAccessibilityService : AccessibilityService() {
             val step = p.steps.first()
             val ok = try { doStep(step) } catch (e: Exception) { false }
             if (!ok) {
-                handler.postDelayed(tick, 700)
+             handler.postDelayed(this, 700)
                 return
             }
             p.steps.removeFirst()
