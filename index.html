@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>منفّذ</title>
+<style>
+:root{
+  --paper:#EEF1F4;--card:#fff;--ink:#0E1B2B;--mut:#5B6B80;--line:#D5DBE3;
+  --cobalt:#2547F5;--lime:#D8F24A;--ok:#12805C;--err:#C62F3B;--board:#0E1B2B;--soft:#E4E9F0;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#0B1420;--card:#121F31;--ink:#E7EDF5;--mut:#8DA0B8;--line:#22334A;--soft:#1A2A40;--board:#060D17;--ok:#43D19E;--err:#FF7B86}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+  font-family:"Noto Sans Arabic","Segoe UI",Tahoma,system-ui,sans-serif;font-size:15px;direction:rtl}
+body{display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+header{padding:16px 18px 12px;background:var(--ink);color:#fff;display:flex;align-items:baseline;justify-content:space-between}
+header h1{margin:0;font-size:22px;font-weight:800;letter-spacing:0}
+header span{font-size:12px;color:#9fb0c8}
+main{flex:1;overflow-y:auto;padding:12px 12px 96px;-webkit-overflow-scrolling:touch}
+nav{display:flex;background:var(--card);border-top:1px solid var(--line)}
+nav button{flex:1;padding:9px 0 8px;background:none;border:0;color:var(--mut);font-size:11px}
+nav button i{display:block;font-style:normal;font-size:19px;margin-bottom:1px}
+nav button.on{color:var(--cobalt);font-weight:700}
+@media (prefers-color-scheme:dark){nav button.on{color:var(--lime)}}
+#fab{position:fixed;left:16px;bottom:72px;height:54px;padding:0 20px;border-radius:27px;border:0;background:var(--cobalt);color:#fff;
+  font-weight:700;font-size:15px;box-shadow:0 8px 20px rgba(37,71,245,.35)}
+#fab.hide{display:none}
+
+.warn{background:#FFF3C4;color:#5B4300;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.warn button{background:#5B4300;color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:12px}
+.empty{text-align:center;padding:48px 24px;color:var(--mut);line-height:1.9}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:6px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.card.off{opacity:.62}
+.top{display:flex;align-items:stretch}
+.board{background:var(--board);color:var(--lime);min-width:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 6px;
+  font-variant-numeric:tabular-nums;direction:ltr}
+.board b{font-size:26px;font-weight:700;line-height:1;letter-spacing:1px}
+.board small{font-size:10px;color:#9fb0c8;margin-top:5px;direction:rtl}
+.info{flex:1;padding:10px 12px;min-width:0}
+.info .t{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.info .s{color:var(--mut);font-size:12.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sw{position:relative;display:inline-block;width:46px;height:26px;flex:none;align-self:center;margin-inline:10px}
+.sw input{opacity:0;width:0;height:0}
+.sw b{position:absolute;inset:0;background:var(--line);border-radius:13px;transition:.2s}
+.sw b:after{content:"";position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+b{background:var(--cobalt)}
+.sw input:checked+b:after{right:23px}
+.meta{padding:7px 12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mut);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.meta b{color:var(--ink)}
+.tag{padding:1px 8px;border-radius:9px;font-size:11px;background:var(--soft);color:var(--mut)}
+.tag.ok{background:rgba(18,128,92,.14);color:var(--ok)}
+.st{color:var(--ink)}
+.acts{display:flex;border-top:1px solid var(--line)}
+.acts button{flex:1;background:none;border:0;padding:10px 0;font-size:13px;color:var(--cobalt);border-inline-start:1px solid var(--line)}
+.acts button:first-child{border-inline-start:0}
+.acts button.d{color:var(--err);flex:.6}
+@media (prefers-color-scheme:dark){.acts button{color:#9db1ff}}
+
+.sec{font-size:12.5px;color:var(--mut);font-weight:700;margin:16px 4px 8px}
+.log{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;border-inline-start:4px solid var(--ok)}
+.log.bad{border-inline-start-color:var(--err)}
+.log b{display:block;font-size:14px}
+.log small{color:var(--mut);display:block;margin-top:2px;line-height:1.6}
+.perm{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;gap:10px;align-items:center}
+.perm .d{width:12px;height:12px;border-radius:50%;background:var(--err);flex:none}
+.perm.ok .d{background:var(--ok)}
+.perm div{flex:1;min-width:0}
+.perm b{display:block;font-size:14px}
+.perm small{color:var(--mut);line-height:1.6;display:block;margin-top:2px}
+.perm button,.btn{background:var(--cobalt);color:#fff;border:0;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600}
+.perm.ok button{background:var(--soft);color:var(--mut)}
+.btn.ghost{background:var(--soft);color:var(--ink)}
+.btn.block{width:100%;padding:12px;margin-top:8px}
+.note{background:var(--soft);border-radius:12px;padding:12px;font-size:13px;line-height:1.8;margin-bottom:8px}
+.row{display:flex;gap:8px;align-items:center}
+.row.sp{justify-content:space-between;padding:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px}
+.row.sp div small{display:block;color:var(--mut);font-size:12px}
+
+/* editor */
+.sheet{position:fixed;inset:0;background:var(--paper);z-index:30;display:flex;flex-direction:column;transform:translateY(102%);transition:transform .25s}
+.sheet.open{transform:none}
+.sh{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--ink);color:#fff}
+.sh h2{margin:0;font-size:17px}
+.sh button{background:none;border:0;color:#fff;font-size:20px;padding:4px 8px}
+.sh button.save{background:var(--lime);color:#0E1B2B;font-size:14px;font-weight:700;border-radius:10px;padding:8px 18px}
+.sb{flex:1;overflow-y:auto;padding:12px 14px 40px}
+label.f{display:block;margin-bottom:12px}
+label.f>span{display:block;font-size:12.5px;color:var(--mut);margin-bottom:5px}
+input,select,textarea{width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--cobalt)}
+small.h{display:block;color:var(--mut);font-size:12px;margin-top:5px;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tp{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 4px;font-size:12px;text-align:center}
+.tp i{display:block;font-style:normal;font-size:22px;margin-bottom:3px}
+.tp.on{border-color:var(--cobalt);background:rgba(37,71,245,.08);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:7px 12px;border-radius:18px;border:1px solid var(--line);background:var(--card);font-size:13px}
+.chip.on{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
+.mini{background:var(--soft);border:0;border-radius:10px;padding:10px 12px;flex:none;width:auto}
+.prev{background:var(--board);color:var(--lime);border-radius:12px;padding:12px 14px;margin-top:6px;font-size:13px;line-height:2;direction:rtl}
+.prev b{color:#fff}
+.prev .m{color:#9fb0c8;font-size:12px}
+#modal{position:fixed;inset:0;background:rgba(5,10,18,.6);z-index:50;display:none;align-items:center;justify-content:center;padding:24px}
+#modal.show{display:flex}
+#modal .box{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:340px}
+#modal p{margin:0 0 16px;line-height:1.8}
+#modal .row{justify-content:flex-end}
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:20px;padding:10px 18px;font-size:13px;z-index:60;opacity:0;pointer-events:none;transition:opacity .2s;max-width:88%;text-align:center}
+#toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header><h1>منفّذ</h1><span id="sub">أتمتة الأوامر المتكررة</span></header>
+<main id="view"></main>
+<button id="fab" onclick="newT()">＋ أمر جديد</button>
+<nav>
+  <button data-tab="tasks" onclick="go('tasks')"><i>⚡</i>الأوامر</button>
+  <button data-tab="logs" onclick="go('logs')"><i>📋</i>السجل</button>
+  <button data-tab="perms" onclick="go('perms')"><i>🛡️</i>الصلاحيات</button>
+  <button data-tab="cfg" onclick="go('cfg')"><i>⚙️</i>الإعدادات</button>
+</nav>
+<div class="sheet" id="sheet"></div>
+<div id="modal"><div class="box"><p id="mtxt"></p><div class="row"><button class="btn ghost" onclick="mclose()">إلغاء</button><button class="btn" id="mok">تأكيد</button></div></div></div>
+<div id="toast"></div>
+
+<script>
+const A = window.Android || new Proxy({}, {get:(_,k)=>()=>({getStatus:'{}',getSettings:'{}',saveTask:'OK',getApps:'[]'}[k]||'[]')});
+const TYPES = {
+  whatsapp:{ic:'💬',name:'رسالة واتساب'}, sms:{ic:'✉️',name:'رسالة SMS'}, call:{ic:'📞',name:'اتصال'},
+  wifi:{ic:'📶',name:'الواي فاي'}, data:{ic:'📡',name:'بيانات الجوال'}, netswitch:{ic:'🔄',name:'تبديل الشبكة'},
+  bluetooth:{ic:'🔷',name:'البلوتوث'}, flashlight:{ic:'🔦',name:'الكشاف'}, sound:{ic:'🔔',name:'وضع الصوت'},
+  openapp:{ic:'📱',name:'فتح تطبيق'}, openurl:{ic:'🌐',name:'فتح رابط'}, notify:{ic:'⏰',name:'تذكير'}
+};
+const WD = [[7,'السبت'],[1,'الأحد'],[2,'الاثنين'],[3,'الثلاثاء'],[4,'الأربعاء'],[5,'الخميس'],[6,'الجمعة']];
+const PERMS = [
+  {k:'accessibility',t:'خدمة الوصول (Accessibility)',d:'أساسية: تضغط زر الإرسال في واتساب وتبدّل الواي فاي والبيانات والبلوتوث.',a:'accessibility',req:1},
+  {k:'overlay',t:'العرض فوق التطبيقات',d:'تسمح بفتح واتساب والإعدادات تلقائيًا وإيقاظ الشاشة من الخلفية.',a:'overlay',req:1},
+  {k:'exact',t:'المنبّهات الدقيقة',d:'لتنفيذ الأمر في الدقيقة المحددة بالضبط.',a:'exact',req:1},
+  {k:'battery',t:'استثناء توفير البطارية',d:'يمنع النظام من تعطيل المنبّهات عند الخمول.',a:'battery',req:1},
+  {k:'notif',t:'الإشعارات',d:'لعرض التذكيرات وتنبيهات فشل التنفيذ.',a:'notif'},
+  {k:'sms',t:'إرسال الرسائل SMS',d:'مطلوبة لأوامر الرسائل النصية.',a:'sms'},
+  {k:'call',t:'إجراء المكالمات',d:'مطلوبة لأمر الاتصال.',a:'call'},
+  {k:'dnd',t:'الوصول إلى «عدم الإزعاج»',d:'مطلوبة لتفعيل وضع الصامت الكامل.',a:'dnd'}
+];
+let tasks=[],logs=[],st={},cfg={},tab='tasks',ed=null,apps=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const J=(f,d)=>{try{return JSON.parse(f())}catch(e){return d}};
+const pad=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const fmt=ms=>ms?new Date(ms).toLocaleString('ar',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+const stl=s=>({on:'تشغيل',off:'إيقاف',toggle:'تبديل'}[s]||s||'');
+
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2600)}
+function ask(msg,cb){$('#mtxt').textContent=msg;$('#modal').classList.add('show');$('#mok').onclick=()=>{mclose();cb()}}
+function mclose(){$('#modal').classList.remove('show')}
+
+function load(){tasks=J(()=>A.getTasks(),[]);st=J(()=>A.getStatus(),{});cfg=J(()=>A.getSettings(),{});logs=J(()=>A.getLogs(),[])}
+function refresh(){load();render()}
+function go(t){tab=t;render();$('#view').scrollTop=0}
+window.onNativeResume=()=>{if(!ed)refresh()};
+setInterval(()=>{if(!ed&&!document.hidden)refresh()},8000);
+window.handleBack=()=>{
+  if($('#modal').classList.contains('show')){mclose();return true}
+  if(ed){closeEd();return true}
+  if(tab!=='tasks'){go('tasks');return true}
+  return false;
+};
+
+/* ───────── العرض ───────── */
+function render(){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  $('#fab').classList.toggle('hide',tab!=='tasks');
+  const v=$('#view');
+  if(tab==='tasks')v.innerHTML=tasksHTML();
+  else if(tab==='logs')v.innerHTML=logsHTML();
+  else if(tab==='perms')v.innerHTML=permsHTML();
+  else v.innerHTML=cfgHTML();
+}
+function ptext(t){
+  const p=t.params||{};
+  switch(t.type){
+    case 'whatsapp':case 'sms':return (p.phone||'')+' — '+(p.message||'').slice(0,28);
+    case 'call':return p.phone||'';
+    case 'wifi':case 'data':case 'bluetooth':case 'flashlight':return stl(p.state);
+    case 'netswitch':return p.mode==='data_to_wifi'?'بيانات ← واي فاي':'واي فاي ← بيانات';
+    case 'sound':return {normal:'رنين',vibrate:'اهتزاز',silent:'صامت'}[p.mode]||'';
+    case 'openapp':return p.appName||p.pkg||'';
+    case 'openurl':return p.url||'';
+    case 'notify':return p.title||p.message||'';
+  }return '';
+}
+function stext(t){
+  const a=t.timesPerDay>1?`${t.timesPerDay} مرات يوميًا كل ${t.intervalMin} د`:'مرة يوميًا';
+  const b=t.days>0?`لمدة ${t.days} يوم`:'بلا نهاية';
+  const c=t.weekdays&&t.weekdays.length&&t.weekdays.length<7?' • '+WD.filter(w=>t.weekdays.includes(w[0])).map(w=>w[1]).join('، '):'';
+  return `${a} • ${b}${c}`;
+}
+function card(t){
+  const ty=TYPES[t.type]||{ic:'⚙️',name:t.type};
+  const stag=t.finished?'<span class="tag">انتهت</span>':t.enabled?'<span class="tag ok">نشطة</span>':'<span class="tag">متوقفة</span>';
+  return `<div class="card ${t.enabled?'':'off'}">
+  <div class="top">
+    <div class="board"><b>${esc(t.firstTime)}</b><small>${t.timesPerDay>1?'×'+t.timesPerDay:'يوميًا'}</small></div>
+    <div class="info"><div class="t">${ty.ic} ${esc(t.name||ty.name)}</div><div class="s">${ty.name} — ${esc(ptext(t))}</div></div>
+    <label class="sw"><input type="checkbox" ${t.enabled?'checked':''} onchange="setEn('${t.id}',this.checked)"><b></b></label>
+  </div>
+  <div class="meta">🕒 ${esc(stext(t))}</div>
+  <div class="meta">القادم: <b>${t.enabled?fmt(t.nextRun):'—'}</b> ${stag}<span>نُفّذت ${t.runCount}${t.maxRuns?' من '+t.maxRuns:''} مرة</span></div>
+  ${t.lastStatus?`<div class="meta st">${esc(t.lastStatus)}</div>`:''}
+  <div class="acts"><button onclick="runNow('${t.id}')">▶ تنفيذ الآن</button><button onclick="editT('${t.id}')">تعديل</button><button onclick="dupT('${t.id}')">نسخ</button><button class="d" onclick="delT('${t.id}')">حذف</button></div>
+</div>`;
+}
+function tasksHTML(){
+  const miss=PERMS.filter(p=>p.req&&st[p.k]===false);
+  let h='';
+  if(miss.length)h+=`<div class="warn"><span>ناقصة ${miss.length} صلاحيات أساسية — بدونها قد لا تُنفَّذ الأوامر.</span><button onclick="go('perms')">إكمالها</button></div>`;
+  if(!tasks.length)return h+`<div class="empty"><b>لا توجد أوامر بعد</b>أضف أول أمر: رسالة واتساب يومية، إطفاء الواي فاي ليلًا، أو تبديل الشبكة في وقت محدد.</div>`;
+  const sorted=[...tasks].sort((a,b)=>(b.enabled-a.enabled)||((a.nextRun||9e15)-(b.nextRun||9e15)));
+  return h+sorted.map(card).join('');
+}
+function logsHTML(){
+  let h=`<div class="row" style="justify-content:space-between;margin:4px 4px 10px"><b>آخر العمليات</b><button class="btn ghost" onclick="ask('مسح كل السجل؟',()=>{A.clearLogs();refresh()})">مسح السجل</button></div>`;
+  if(!logs.length)return h+`<div class="empty">لا توجد عمليات مسجّلة بعد.</div>`;
+  return h+logs.map(l=>`<div class="log ${l.ok?'':'bad'}"><b>${l.ok?'✅':'❌'} ${esc(l.name)}</b><small>${esc(l.msg)}</small><small>${fmt(l.t)}</small></div>`).join('');
+}
+function permsHTML(){
+  let h=`<div class="note">لكي يعمل التطبيق دون تدخّل منك امنح الصلاحيات الأساسية (الأربع الأولى). الأخرى حسب الأوامر التي تستخدمها.</div>`;
+  h+=PERMS.map(p=>{const ok=st[p.k]!==false;return `<div class="perm ${ok?'ok':''}"><span class="d"></span><div><b>${p.t}</b><small>${p.d}</small></div><button onclick="A.openSetting('${p.a}')">${ok?'تعديل':'منح'}</button></div>`}).join('');
+  h+=`<div class="sec">إذا كان خيار خدمة الوصول رماديًا (أندرويد 13+)</div>
+  <div class="note">لأن التطبيق مثبّت من خارج المتجر: افتح <b>معلومات التطبيق</b> ← القائمة ⋮ في الأعلى ← <b>السماح بالإعدادات المقيّدة</b>، ثم ارجع وفعّل خدمة الوصول.</div>
+  <button class="btn block ghost" onclick="A.openSetting('appinfo')">فتح معلومات التطبيق</button>
+  <div class="sec">تنبيه الشركات المصنّعة</div>
+  <div class="note">بعض الهواتف (شاومي، هواوي، أوبو، سامسونج...) توقف التطبيقات في الخلفية. فعّل «التشغيل التلقائي / Autostart» واجعل البطارية «بدون قيود» لهذا التطبيق.</div>
+  <button class="btn block ghost" onclick="A.openUrl('https://dontkillmyapp.com')">دليل إعدادات كل شركة</button>`;
+  return h;
+}
+function cfgHTML(){
+  const sw=(k,t,d)=>`<div class="row sp"><div><b>${t}</b><small>${d}</small></div><label class="sw"><input type="checkbox" ${cfg[k]?'checked':''} onchange="setCfg('${k}',this.checked)"><b></b></label></div>`;
+  return `<div class="sec">التنفيذ</div>
+  ${sw('goHome','العودة للشاشة الرئيسية','بعد كل تنفيذ يعتمد على فتح شاشة.')}
+  ${sw('lockAfter','قفل الشاشة بعد التنفيذ','إذا كانت الشاشة مطفأة قبل التنفيذ يُعاد قفلها بعده.')}
+  ${sw('notifyFail','إشعار عند فشل التنفيذ','يظهر إشعار بسبب الفشل.')}
+  <label class="f" style="display:block;margin-top:8px"><span style="font-size:12.5px;color:var(--mut)">رمز الدولة (للأرقام التي تبدأ بـ 0) — مثال: 966</span><input dir="ltr" inputmode="numeric" value="${esc(cfg.countryCode||'')}" onchange="setCfg('countryCode',this.value)"></label>
+  <div class="sec">نسخ احتياطي</div>
+  <div class="row"><button class="btn" style="flex:1" onclick="A.shareText(A.exportTasks())">تصدير الأوامر</button><button class="btn ghost" style="flex:1" onclick="impBox()">استيراد</button></div>
+  <div id="imp"></div>
+  <div class="sec">عن التطبيق</div>
+  <div class="note"><b>منفّذ</b> — أتمتة الأوامر المتكررة.<br>المطوّر: <b>Khader Abo Salha</b><br>الإصدار 1.0.0<br>كل البيانات تبقى على جهازك ولا يُرسل شيء لأي خادم.</div>`;
+}
+function setCfg(k,v){cfg[k]=v;A.saveSettings(JSON.stringify(cfg))}
+function impBox(){
+  $('#imp').innerHTML=`<textarea id="imptxt" rows="5" dir="ltr" placeholder="الصق نص النسخة الاحتياطية هنا" style="margin-top:8px"></textarea><button class="btn block" onclick="doImp()">استيراد الآن</button>`;
+}
+function doImp(){
+  const r=A.importTasks($('#imptxt').value);
+  if(r.startsWith('OK:')){toast('تم استيراد '+r.slice(3)+' أمر');refresh()}else toast(r.replace('ERR:',''));
+}
+
+/* ───────── إجراءات المهام ───────── */
+function setEn(id,on){const r=A.setEnabled(id,on);if(r!=='OK')toast(r.replace('ERR:',''));refresh()}
+function runNow(id){A.runNow(id);toast('جارٍ التنفيذ...');setTimeout(refresh,4000)}
+function delT(id){ask('حذف هذا الأمر نهائيًا؟',()=>{A.deleteTask(id);refresh()})}
+function dupT(id){const t=tasks.find(x=>x.id===id);if(!t)return;const c=JSON.parse(JSON.stringify(t));c.id='';c.name=(t.name||'')+' (نسخة)';c.runCount=0;const r=A.saveTask(JSON.stringify(c));toast(r==='OK'?'تم النسخ':r.replace('ERR:',''));refresh()}
+
+/* ───────── المحرر ───────── */
+function defTask(){
+  const d=new Date(Date.now()+5*60000);
+  return {id:'',name:'',type:'whatsapp',params:{},startDate:ymd(d),firstTime:pad(d.getHours())+':'+pad(d.getMinutes()),timesPerDay:1,intervalMin:60,days:1,weekdays:[],stopAt:'',maxRuns:0,enabled:true};
+}
+function newT(){ed=defTask();openEd()}
+function editT(id){const t=tasks.find(x=>x.id===id);if(!t)return;ed=JSON.parse(JSON.stringify(t));openEd()}
+function closeEd(){$('#sheet').classList.remove('open');ed=null}
+const F=(l,i)=>`<label class="f"><span>${l}</span>${i}</label>`;
+function openEd(){
+  const t=ed;
+  $('#sheet').innerHTML=`
+  <div class="sh"><button onclick="closeEd()">✕</button><h2>${t.id?'تعديل الأمر':'أمر جديد'}</h2><button class="save" onclick="saveEd()">حفظ</button></div>
+  <div class="sb" oninput="upd()" onchange="upd()">
+    ${F('اسم الأمر (اختياري)',`<input id="e_name" value="${esc(t.name)}" placeholder="مثال: تحية الصباح لأمي">`)}
+    <div class="sec" style="margin-top:4px">ماذا تريد أن ينفَّذ؟</div>
+    <div class="types">${Object.entries(TYPES).map(([k,v])=>`<button type="button" class="tp ${t.type===k?'on':''}" data-t="${k}" onclick="pickType('${k}')"><i>${v.ic}</i>${v.name}</button>`).join('')}</div>
+    <div id="e_params"></div>
+    <div class="sec">متى وكم مرة؟</div>
+    <div class="grid2">
+      ${F('تاريخ البدء',`<input id="s_start" type="date" value="${esc(t.startDate)}">`)}
+      ${F('ساعة أول تنفيذ',`<input id="s_time" type="time" value="${esc(t.firstTime)}">`)}
+      ${F('عدد المرات في اليوم',`<input id="s_times" type="number" min="1" max="200" inputmode="numeric" value="${t.timesPerDay}">`)}
+      <div id="intbox">${F('الفاصل بين المرات (دقيقة)',`<input id="s_int" type="number" min="1" inputmode="numeric" value="${t.intervalMin}">`)}</div>
+    </div>
+    ${F('عدد الأيام (0 = بدون نهاية)',`<input id="s_days" type="number" min="0" inputmode="numeric" value="${t.days}">`)}
+    <label class="f"><span>أيام الأسبوع (بدون اختيار = كل الأيام)</span><div class="chips" id="wd"></div></label>
+    <div class="sec">الإيقاف</div>
+    ${F('إيقاف الأمر تلقائيًا في (اختياري)',`<input id="s_stop" type="datetime-local" value="${esc(t.stopAt)}"><small class="h">لا يُنفَّذ أي موعد بعد هذا الوقت، ثم تتوقف المهمة.</small>`)}
+    ${F('أقصى عدد للتنفيذ الكلي (0 = بلا حد)',`<input id="s_max" type="number" min="0" inputmode="numeric" value="${t.maxRuns}">`)}
+    ${t.id?`<label class="row" style="margin-bottom:12px"><input type="checkbox" id="s_reset" style="width:auto"> تصفير عدّاد التنفيذ (${t.runCount||0})</label>`:''}
+    <div class="prev" id="prev"></div>
+  </div>`;
+  renderParams();renderWd();$('#sheet').classList.add('open');upd();
+}
+function pickType(k){
+  if(ed.type===k)return;
+  ed.params=defaultParams(k);ed.type=k;
+  document.querySelectorAll('.tp').forEach(b=>b.classList.toggle('on',b.dataset.t===k));
+  renderParams();upd();
+}
+function defaultParams(k){
+  if(['wifi','data','bluetooth'].includes(k))return {state:'on'};
+  if(k==='flashlight')return {state:'on'};
+  if(k==='netswitch')return {mode:'wifi_to_data'};
+  if(k==='sound')return {mode:'silent',volume:-1};
+  if(k==='whatsapp')return {waPackage:'auto'};
+  return {};
+}
+function renderWd(){
+  $('#wd').innerHTML=WD.map(w=>`<button type="button" class="chip ${ed.weekdays.includes(w[0])?'on':''}" onclick="togWd(${w[0]})">${w[1]}</button>`).join('');
+}
+function togWd(n){const i=ed.weekdays.indexOf(n);if(i>=0)ed.weekdays.splice(i,1);else ed.weekdays.push(n);renderWd();upd()}
+const sel=(id,opts,cur)=>`<select id="${id}">${opts.map(([v,l])=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('')}</select>`;
+const ONOFF=[['on','تشغيل'],['off','إيقاف'],['toggle','تبديل (عكس الحالة الحالية)']];
+function renderParams(){
+  const p=ed.params||{},t=ed.type;let h='',hint='';
+  const phone=F('رقم الهاتف',`<div class="row"><input id="p_phone" dir="ltr" type="tel" inputmode="tel" placeholder="9665XXXXXXXX" value="${esc(p.phone||'')}"><button type="button" class="mini" onclick="A.pickContact()">👤 جهات</button></div><small class="h">بالصيغة الدولية بدون + (أو ابدأ بـ 0 بعد ضبط رمز الدولة من الإعدادات).</small>`);
+  if(t==='whatsapp'){h=phone+F('نص الرسالة',`<textarea id="p_msg" rows="4" placeholder="اكتب الرسالة...">${esc(p.message||'')}</textarea>`)+F('نسخة واتساب',sel('p_wa',[['auto','تلقائي'],['com.whatsapp','واتساب'],['com.whatsapp.w4b','واتساب للأعمال']],p.waPackage||'auto'));hint='يفتح المحادثة ويضغط زر الإرسال تلقائيًا. يحتاج خدمة الوصول، والرقم يجب أن يكون على واتساب. اترك الهاتف بقفل «سحب» أو بدون قفل ليعمل والشاشة مطفأة.'}
+  else if(t==='sms'){h=phone+F('نص الرسالة',`<textarea id="p_msg" rows="4">${esc(p.message||'')}</textarea>`);hint='تُرسل مباشرة دون فتح أي شاشة (قد تُحتسب رسوم الشبكة).'}
+  else if(t==='call'){h=phone;hint='يبدأ الاتصال تلقائيًا. إنهاء المكالمة يدويًا.'}
+  else if(['wifi','data','bluetooth'].includes(t)){h=F('الإجراء',sel('p_state',ONOFF,p.state||'on'));hint='على أندرويد 10 فأعلى يفتح التطبيق لوحة الإعدادات لثوانٍ ويضغط المفتاح عبر خدمة الوصول، ثم يعود للرئيسية.'}
+  else if(t==='netswitch'){h=F('نوع التبديل',sel('p_mode',[['wifi_to_data','من الواي فاي إلى بيانات الجوال'],['data_to_wifi','من بيانات الجوال إلى الواي فاي']],p.mode||'wifi_to_data'));hint='يطفئ الشبكة الأولى ثم يشغّل الثانية خلال ثوانٍ.'}
+  else if(t==='flashlight'){h=F('الإجراء',sel('p_state',[['on','تشغيل'],['off','إيقاف']],p.state||'on'))}
+  else if(t==='sound'){const v=p.volume>=0;h=F('وضع الرنين',sel('p_smode',[['normal','رنين'],['vibrate','اهتزاز'],['silent','صامت']],p.mode||'silent'))+`<label class="row" style="margin-bottom:8px"><input type="checkbox" id="p_vol_on" style="width:auto" ${v?'checked':''}> ضبط مستوى صوت الوسائط</label><input id="p_vol" type="range" min="0" max="100" value="${v?p.volume:50}"><small class="h" id="p_vol_l"></small>`;hint='وضع «صامت» الكامل يحتاج صلاحية عدم الإزعاج، وإلا يُستخدم الاهتزاز.'}
+  else if(t==='openapp'){h=F('بحث',`<input id="p_q" placeholder="ابحث عن تطبيق..." oninput="fillApps()">`)+F('التطبيق',`<select id="p_pkg" size="6" style="padding:6px"></select>`);setTimeout(fillApps,30)}
+  else if(t==='openurl'){h=F('الرابط',`<input id="p_url" dir="ltr" inputmode="url" placeholder="https://example.com" value="${esc(p.url||'')}">`)}
+  else if(t==='notify'){h=F('العنوان',`<input id="p_title" value="${esc(p.title||'')}">`)+F('نص التذكير',`<textarea id="p_msg" rows="3">${esc(p.message||'')}</textarea>`);hint='يظهر إشعار على الجهاز في الوقت المحدد.'}
+  $('#e_params').innerHTML='<div class="sec">تفاصيل الأمر</div>'+h+(hint?`<small class="h" style="margin-top:-4px">${hint}</small>`:'');
+}
+function fillApps(){
+  if(apps===null)apps=J(()=>A.getApps(),[]);
+  const q=($('#p_q')?.value||'').toLowerCase(),box=$('#p_pkg');if(!box)return;
+  const cur=ed.params.pkg;
+  box.innerHTML=apps.filter(a=>a.name.toLowerCase().includes(q)||a.pkg.includes(q)).map(a=>`<option value="${esc(a.pkg)}" data-n="${esc(a.name)}" ${a.pkg===cur?'selected':''}>${esc(a.name)}</option>`).join('');
+}
+window.onContact=o=>{
+  const e=document.getElementById('p_phone');if(e)e.value=(o.number||'').replace(/[^\d+]/g,'');
+  const n=document.getElementById('e_name');if(n&&!n.value&&o.name)n.value=TYPES[ed.type].name+' — '+o.name;
+  upd();
+};
+function collect(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:''};
+  const t=ed.type,p={};
+  if(['whatsapp','sms','call'].includes(t))p.phone=g('p_phone').trim();
+  if(t==='whatsapp'||t==='sms'||t==='notify')p.message=g('p_msg');
+  if(t==='whatsapp')p.waPackage=g('p_wa')||'auto';
+  if(['wifi','data','bluetooth','flashlight'].includes(t))p.state=g('p_state')||'on';
+  if(t==='netswitch')p.mode=g('p_mode')||'wifi_to_data';
+  if(t==='sound'){p.mode=g('p_smode')||'silent';p.volume=document.getElementById('p_vol_on')?.checked?+g('p_vol'):-1}
+  if(t==='openapp'){const s=document.getElementById('p_pkg');const o=s&&s.selectedOptions[0];p.pkg=s?s.value:(ed.params.pkg||'');p.appName=o?o.dataset.n:(ed.params.appName||'')}
+  if(t==='openurl')p.url=g('p_url').trim();
+  if(t==='notify')p.title=g('p_title');
+  return p;
+}
+function readTask(){
+  const g=id=>document.getElementById(id).value;
+  const t={...ed,name:g('e_name').trim(),params:collect(),startDate:g('s_start'),firstTime:g('s_time'),
+    timesPerDay:Math.max(1,parseInt(g('s_times'))||1),intervalMin:Math.max(1,parseInt(g('s_int'))||60),
+    days:Math.max(0,parseInt(g('s_days'))||0),stopAt:g('s_stop'),maxRuns:Math.max(0,parseInt(g('s_max'))||0),
+    resetCount:!!(document.getElementById('s_reset')&&document.getElementById('s_reset').checked)};
+  if(!t.name)t.name=TYPES[t.type].name;
+  return t;
+}
+function nextTimes(t,n){
+  const out=[],now=Date.now(),[h,m]=(t.firstTime||'09:00').split(':').map(Number);
+  const start=new Date((t.startDate||ymd(new Date()))+'T00:00:00'),stop=t.stopAt?new Date(t.stopAt).getTime():Infinity;
+  const maxDays=t.days>0?t.days:3650;
+  for(let d=0;d<maxDays&&out.length<n;d++){
+    const day=new Date(start);day.setDate(day.getDate()+d);
+    if(t.weekdays.length&&!t.weekdays.includes(day.getDay()+1))continue;
+    for(let k=0;k<t.timesPerDay;k++){
+      const c=new Date(day);c.setHours(h,m+k*t.intervalMin,0,0);const ms=c.getTime();
+      if(ms>stop)return out;
+      if(t.maxRuns>0&&(ed.runCount||0)+out.length>=t.maxRuns&&!t.resetCount)return out;
+      if(ms>now){out.push(ms);if(out.length>=n)return out}
+    }
+  }
+  return out;
+}
+function total(t){
+  if(t.days<=0)return null;
+  const start=new Date((t.startDate||ymd(new Date()))+'T00:00:00');let n=0;
+  for(let d=0;d<t.days;d++){const day=new Date(start);day.setDate(day.getDate()+d);if(!t.weekdays.length||t.weekdays.includes(day.getDay()+1))n+=t.timesPerDay}
+  return t.maxRuns>0?Math.min(n,t.maxRuns):n;
+}
+function upd(){
+  if(!ed||!document.getElementById('prev'))return;
+  try{
+    const t=readTask();
+    document.getElementById('intbox').style.display=t.timesPerDay>1?'block':'none';
+    const vl=document.getElementById('p_vol_l');if(vl)vl.textContent='المستوى: '+document.getElementById('p_vol').value+'%';
+    const nt=nextTimes(t,4),tot=total(t);
+    document.getElementById('prev').innerHTML=nt.length
+      ?`<span class="m">أقرب المواعيد</span><br>${nt.map(x=>'<b>'+fmt(x)+'</b>').join('<br>')}<br><span class="m">${tot!==null?'إجمالي التنفيذ المتوقع: '+tot+' مرة':'تستمر حتى توقفها'}</span>`
+      :`<span class="m">لا توجد مواعيد قادمة بهذه الإعدادات. غيّر التاريخ أو عدد الأيام أو وقت الإيقاف.</span>`;
+  }catch(e){}
+}
+function saveEd(){
+  const t=readTask();
+  const r=A.saveTask(JSON.stringify(t));
+  if(r==='OK'){closeEd();toast('تم الحفظ ✅');refresh()}else toast(r.replace('ERR:',''));
+}
+refresh();
+</script>
+</body>
+</html>
