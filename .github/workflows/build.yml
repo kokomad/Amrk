@@ -26,6 +26,67 @@ jobs:
       - name: Accept Android licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
 
+      - name: Arrange project structure and resources
+        run: |
+          mkdir -p src/main/kotlin src/main/assets
+          mkdir -p src/main/res/values src/main/res/xml src/main/res/drawable src/main/res/mipmap-anydpi-v26
+          cp AndroidManifest.xml src/main/
+          cp *.kt src/main/kotlin/
+          cp index.html src/main/assets/ || true
+
+          cat > src/main/res/values/strings.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">منفّذ</string>
+              <string name="accessibility_desc">يساعد التطبيق على تنفيذ الأوامر المجدولة تلقائياً</string>
+          </resources>
+          EOF
+
+          cat > src/main/res/values/colors.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_bg">#1E88E5</color>
+          </resources>
+          EOF
+
+          cat > src/main/res/values/styles.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar" />
+              <style name="Transparent" parent="android:Theme.Translucent.NoTitleBar" />
+          </resources>
+          EOF
+
+          cat > src/main/res/xml/accessibility_config.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+              android:accessibilityEventTypes="typeAllMask"
+              android:accessibilityFeedbackType="feedbackGeneric"
+              android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows"
+              android:canRetrieveWindowContent="true"
+              android:canPerformGestures="true"
+              android:description="@string/accessibility_desc"
+              android:notificationTimeout="100" />
+          EOF
+
+          cat > src/main/res/drawable/ic_fg.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp" android:height="108dp"
+              android:viewportWidth="108" android:viewportHeight="108">
+              <path android:fillColor="#FFFFFF"
+                  android:pathData="M42,34 L78,54 L42,74 Z" />
+          </vector>
+          EOF
+
+          cat > src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_bg" />
+              <foreground android:drawable="@drawable/ic_fg" />
+          </adaptive-icon>
+          EOF
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.7'
@@ -45,7 +106,7 @@ jobs:
       - name: Rename APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/release/*.apk dist/Monaffeth.apk
+          cp build/outputs/apk/release/*.apk dist/Monaffeth.apk
 
       - uses: actions/upload-artifact@v4
         with:
